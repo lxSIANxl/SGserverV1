@@ -2634,8 +2634,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'DIS': createStock('Disney (디즈니)', 9000, 0.025, 0.04, 0.535), // 0.50 -> 0.52
             'VT': createStock('Vanguard Total World ETF (뱅가드 토탈 월드 ETF)', 10000, 0.008, 0.01, 0.53), // 0.51 -> 0.53
             'PG': createStock('Procter & Gamble (P&G)', 16000, 0.01, 0.01, 0.53), // 0.51 -> 0.53
-            'WMT': createStock('Walmart (월마트)', 15000, 0.012, 0.01, 0.53), // 0.51 -> 0.53
-            'COST': createStock('Costco (코스트코)', 50000, 0.015, 0.02, 0.52), // 0.52 -> 0.54
+            'WMT': createStock('Walmart (월마트)', 15000, 0.012, 0.01, 0.53), // 0.51 -> 0.54
             'PEP': createStock('PepsiCo (펩시코)', 17000, 0.01, 0.01, 0.53), // 0.51 -> 0.53
             'HD': createStock('Home Depot (홈디포)', 30000, 0.017, 0.02, 0.53), // 0.51 -> 0.53
             'SEC': createStock('삼성전자 (Samsung Elec.)', 75000, 0.018, 0.03, 0.515), // 0.52 -> 0.54
@@ -2727,8 +2726,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; // (forEach의 다음 아이템으로 넘어감)
                 }
                 
-                let volatility = stock.baseVolatility * 2;
-                let riseProbability = stock.baseRiseProbability - 0.105;
+                let volatility = stock.baseVolatility * 5;
+                let riseProbability = stock.baseRiseProbability - 0.305;
                 
                 // 1. 큰 이벤트 (폭등/폭락)
                 if (Math.random() < stock.bigEventChance) {
@@ -2854,3 +2853,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initGame();
 
 });
+
