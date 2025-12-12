@@ -2727,8 +2727,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; // (forEach의 다음 아이템으로 넘어감)
                 }
                 
-                let volatility = stock.baseVolatility;
-                let riseProbability = stock.baseRiseProbability - 0.005;
+                let volatility = stock.baseVolatility * 2;
+                let riseProbability = stock.baseRiseProbability - 0.105;
                 
                 // 1. 큰 이벤트 (폭등/폭락)
                 if (Math.random() < stock.bigEventChance) {
@@ -2852,4 +2852,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === 17. 게임 시작 ===
     initGame();
+
 });
