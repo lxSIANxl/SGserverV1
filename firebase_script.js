@@ -1,7 +1,3 @@
-// ======================================================
-// (2) 메인 스크립트 (firebase_script.js)
-// ======================================================
-
 // DOM이 로드되면 게임 초기화
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -10,27 +6,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_HISTORY_LOG = 100;      // 거래내역 최대 100줄
     const MAX_HISTORY = 30;           // 차트용 데이터 30개
     const FEE_RATE = 0.0075;           // 매매 수수료 (0.75%)
-    const TIME_ATTACK_DURATION = 30 * 60; // 30분 (초)
+    const TIME_ATTACK_DURATION =  7 * 60; // 타임 어택 시간 (단위: 초)
     const DELIST_DURATION_MS = 10 * 60 * 1000; // 상장 폐지 시간 
     let marketUpdateTimer = null;
 
-    // [수정] 실제 주식 이름 20개
+    // 주식 (20개)
     const STOCK_TICKERS = [
         'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'V', 'JNJ',
         'XOM', 'JPM', 'TSM', 'NFLX', 'SBUX', 'NKE', 'MCD', 'KO', 'DIS', 'VT',
         'PG', 'WMT', 'COST', 'PEP', 'HD','SEC', 'SKH', 'LGES', 'HYMT', 'NAVER'
     ];
-    // 자산 (금, 은, 원유)
+    // 자산 (5개)
     const ASSET_TICKERS = ['GOLD', 'SLVR', 'OIL', 'NGAS', 'COPR', 'WHEAT'];
-    // 채권 (미국 장기, 미국 단기)
+    // 채권 (4개)
     const BOND_TICKERS = ['BOND_L', 'BOND_S', 'CORP_B', 'HY_B'];
-    // 코인
+    // 코인 (4개)
     const COIN_TICKERS = ['BTC', 'ETH', 'DOGE', 'SOL'];
-    // 기타
+    // 기타 (3개)
     const MISC_TICKERS = ['DEV_MOOD', 'SONG', 'COOKIE'];
 
 
-    // [수정] 모든 티커를 동적으로 결합 (createInitialPlayerState에서 사용)
+    // 모든 티커 결합 (플레이어 데이터 생성시 사용)
     const allTickers = [
         ...STOCK_TICKERS, 
         ...ASSET_TICKERS, 
@@ -38,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ...MISC_TICKERS
     ];
 
-    // [수정] 모든 티커의 이름 정의
+    // 모든 티커 이름
     const allTickerNames = {
         // --- 주식 (STOCKS) ---
         'AAPL': 'Apple (애플)',
@@ -99,17 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    // === 2. Global Variables ===
-    let state = {};                 // 현재 플레이어의 모든 데이터 (DB 미러링)
-    let stockData = {};             // 마켓의 모든 주식 데이터 (DB 미러링)
-    let allPlayersData = {};        // [랭킹용] 모든 플레이어 데이터
+    // 글로벌 변수 
+    let state = {};                 // 현재 플레이어의 모든 데이터
+    let stockData = {};             // 마켓의 모든 주식 데이터
+    let allPlayersData = {};        // (랭킹용) 모든 플레이어 데이터
     
     let currentView = 'stocks';     // 'stocks', 'assets', 'bonds', 'misc'
-    let currentTicker = 'AAPL';     // [수정] 기본값을 'AAPL'로
-    let currentRankView = 'networth'; // [랭킹용] 'networth' or 'timeattack'
+    let currentTicker = 'AAPL';     // 기본값을 'AAPL'로
+    let currentRankView = 'networth'; // 랭킹 기본 화면(자산)
     
-    let netWorthRankings = [];      // [랭킹용] 총 자산 랭킹 데이터
-    let timeAttackRankings = [];    // [랭킹용] 타임 어택 랭킹 데이터
+    let netWorthRankings = [];      // (랭킹용) 총 자산 랭킹 데이터
+    let timeAttackRankings = [];    // (랭킹용) 타임 어택 랭킹 데이터
 
     let chartInstance = null;
     let authUnsubscribe = null;     // 인증 리스너 해제용
@@ -121,10 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let bankTimer = null; // 은행 이자 타이머
 
     
-    // === 3. DOM Elements (els) ===
-    // (HTML 파일의 모든 ID를 여기에 등록)
+    // DOM 요소
+    // (HTML 파일의 모든 ID를 여기 등록)
     const els = {
-        // 인증
+        // 인증용
         authScreen: null,
         googleLoginBtn: null,
         mainGame: null,
@@ -151,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
         buyMaxBtn: null,
         sellAllBtn: null,
 
-        
         // 포트폴리오
         cash: null,
         stockValue: null,
@@ -232,19 +227,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     
-    // === 4. Firebase References ===
+    // DB 참조
     const auth = firebase.auth();
     const db = firebase.database();
     
-    let playerRef = null; // (로그인 후 설정됨: db.ref(`players/${user.uid}`))
+    let playerRef = null; // (로그인 후 설정됨)
     const marketRef = db.ref('market');
     
-
-    // === 5. Main Initialization ===
     
-    /**
-     * DOM ID와 els 객체를 바인딩
-     */
+    // DOM ID와 els 객체를 바인딩
     function bindDOMElements() {
         for (const key in els) {
             els[key] = document.getElementById(key);
@@ -254,9 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * 게임 시작 (DOM 로드 후 호출됨)
-     */
+    // 게임 시작
     function initGame() {
         bindDOMElements();
         if (!els.googleLoginBtn) {
@@ -265,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         setupEventListeners();
         
-        // 인증 리스너 시작 (가장 먼저)
+        // 인증 리스너 시작
         setupAuthListener(); 
 
         const newsRef = db.ref('news');
@@ -279,13 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // (로그인 성공 시, setupAuthListener가 다른 리스너들을 호출)
     }
-
     
-    // === 6. Event Listeners Setup ===
-    
-    /**
-     * 모든 UI 이벤트 리스너 설정
-     */
+    // 모든 UI 이벤트 리스너 설정
     function setupEventListeners() {
         // 인증
         els.googleLoginBtn.addEventListener('click', signInWithGoogle);
@@ -297,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         els.showBondsBtn.addEventListener('click', () => switchView('bonds'));
         els.showCoinsBtn.addEventListener('click', () => switchView('coins'));
         els.showMiscBtn.addEventListener('click', () => switchView('misc'));
-        
 
         // 거래
         els.buyBtn.addEventListener('click', handleBuyStock);
@@ -344,26 +327,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     
-    // === 7. Firebase Listeners (Auth, Player, Market) ===
+    // DB 리스너
     
-    /**
-     * 인증 상태 리스너 설정
-     */
+    // 인증 상태 리스너
     function setupAuthListener() {
         authUnsubscribe = auth.onAuthStateChanged((user) => {
 
-            // [1] 여기에 2단계에서 복사한 본인의 UID를 붙여넣으세요!
+            // 어드민 uid 어드민 탭 전용
             const ADMIN_UID = "CBHVz5QNzUgiES6psrBYOREsgJE2"; 
-            
 
-            // [2] 현재 로그인한 유저가 관리자인지 확인
+            // 현재 로그인한 유저가 관리자인지 확인
             if (user.uid === ADMIN_UID) {
-                // 관리자라면 'hidden' 클래스를 제거 (버튼 보이기)
+                // 관리자면 버튼 보이기
                 if (els.adminMenuBtn) {
                 els.adminMenuBtn.classList.remove('hidden');
                 }
             } else {
-                // 관리자가 아니라면 'hidden' 클래스를 유지 (버튼 숨기기)
+                // 관리자가 아니면 버튼 비활성화
                 if (els.adminMenuBtn) {
                    els.adminMenuBtn.classList.add('hidden');
                 }
@@ -390,16 +370,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (isAdmin) {
                     console.log("관리자 계정으로 로그인되었습니다.");
-                    // (관리자 탭 표시 등)
-                    // if (els.adminTabBtn) els.adminTabBtn.classList.remove('hidden');
-                    
-                    // [경고] 2명 이상의 관리자가 접속하면 이 타이머가 중복 실행됩니다!
+                    // 관리자 접속 시 마켓 가동
                     startMarketTimer();
                     
                 } else {
                     console.log("일반 사용자로 로그인되었습니다.");
-                    // (관리자 탭 숨기기 등)
-                    // if (els.adminTabBtn) els.adminTabBtn.classList.add('hidden');
                 }
                 
             } else {
@@ -412,7 +387,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 모든 DB 리스너 해제
                 if (playerUnsubscribe) playerUnsubscribe();
                 if (marketUnsubscribe) marketUnsubscribe();
-                // (랭킹 리스너 등 다른 리스너도 해제 필요)
 
                 // UI 처리
                 els.authScreen.classList.remove('hidden');
@@ -421,35 +395,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * 플레이어 데이터 리스너 설정
-     */
+    // 플레이어 데이터 리스너
     function setupPlayerListener(user) {
-        
-        // ▼▼▼ [수정] 관리자(Admin) 확인 로직 ▼▼▼
-        
-        // [1] 여기에 본인의 UID가 들어가 있어야 합니다.
-        const ADMIN_UID = "CBHVz5QNzUgiES6psrBYOREsgJE2"; // (본인 UID)
-
-        // [2] 현재 로그인한 유저가 관리자인지 확인
-        if (user.uid === ADMIN_UID) {
-            // 관리자라면 'hidden' 클래스를 제거 (버튼 보이기)
-            if (els.adminMenuBtn) {
-                els.adminMenuBtn.classList.remove('hidden');
-            }
-        } else {
-            // 관리자가 아니라면 'hidden' 클래스를 유지 (버튼 숨기기)
-            if (els.adminMenuBtn) {
-                els.adminMenuBtn.classList.add('hidden');
-            }
-        }
         
         playerRef.on('value', (snapshot) => {
             if (snapshot.exists()) {
                 // 데이터가 있으면 state에 저장
                 state = snapshot.val();
                 
-                // ▼▼▼ [수정] 타임 어택 상태 확인 및 복구 ▼▼▼
+                // 타임 어택 상태 확인 및 복구
                 if (state.timeAttack && state.timeAttack.isInTimeAttack) {
                     if (timeAttackTimer) clearInterval(timeAttackTimer); 
                     
@@ -458,19 +412,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const remainingSeconds = TIME_ATTACK_DURATION - Math.floor(elapsedMs / 1000);
 
                     if (remainingSeconds <= 0) {
-                        // (시간 초과 -> 자동 종료)
+                        // (시간 초과시 자동 종료)
                         showAlert("진행 중이던 타임 어택이 종료되었습니다. 결과를 처리합니다.");
                         handleEndTimeAttack(); 
                         isTimeAttackListenerInitialized = false; // [신규] 플래그 리셋
                     } else {
-                        // (시간 남음 -> 타이머 재개)
+                        // (시간이 남으면 타이머 재개)
                         
-                        // ▼▼▼ [수정] 플래그를 확인하여 알림을 1회만 띄움 ▼▼▼
+                        // 플래그를 확인하여 알림을 1회만 띄움
                         if (!isTimeAttackListenerInitialized) {
                             showAlert(`진행 중인 타임 어택을 재개합니다. (남은 시간: ${Math.floor(remainingSeconds/60)}분)`);
                             isTimeAttackListenerInitialized = true; // 플래그 설정
                         }
-                        // ▲▲▲ [수정] ▲▲▲
 
                         startTimeAttackTimer(remainingSeconds); 
                         
@@ -484,14 +437,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (timeAttackTimer) clearInterval(timeAttackTimer);
                     timeAttackTimer = null;
                     
-                    isTimeAttackListenerInitialized = false; // [신규] 플래그 리셋
+                    isTimeAttackListenerInitialized = false; // 플래그 리셋
                     
                     els.timeAttackBtn.disabled = false;
                     els.timeAttackBtn.textContent = `🔥 타임 어택 (${TIME_ATTACK_DURATION / 60}분)`;
                     els.timeAttackTimerDisplay.classList.add('hidden');
                     els.timeAttackCancelBtn.classList.add('hidden'); 
                 }
-                // ▲▲▲ [수정] 로직 끝 ▲▲▲
 
                 updateUI(); // UI 갱신
             } else {
@@ -506,9 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * 마켓 데이터 리스너 설정
-     */
+    // 마켓 데이터 리스너 설정
     function setupMarketListener() {
         const stocksRef = marketRef.child('stocks');
         
@@ -520,9 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // 마켓 데이터가 없으면 (최초 실행)
                 console.log("마켓 데이터 없음. 초기화 시도...");
-                // (참고: 실제로는 관리자만 초기화해야 함)
-                // const initialState = createInitialMarketState();
-                // stocksRef.set(initialState);
             }
             
             // (플레이어 데이터(state)가 로드된 후에만 실행)
@@ -540,8 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (playerStock && playerStock.shares > 0 && marketStock && marketStock.isDelisted) {
                         
                         // 3. 조건 만족 시, 강제 청산 함수 호출
-                        // (이 함수는 1초마다 호출될 수 있지만,
-                        // 함수 내부의 트랜잭션이 1회 실행을 보장함)
+                        // (이 함수는 1초마다 호출될 수 있지만 함수 내부의 트랜잭션이 1회 실행을 보장)
                         handleForceLiquidate(ticker);
                     }
                 }
@@ -558,16 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     
-    // === 8. Core Logic (Buy, Sell, Reset) ===
+    // 핵심 로직
 
-    /**
-     * [최종 수정본] 매수 (NaN, TypeError, Error: set 방어)
-     */
+    // 매수
     function handleBuyStock() {
         const amount = parseInt(els.amount.value, 10); 
         const ticker = currentTicker;
 
-        // [방어 1] 수량 검사
+        // 수량 검사
         if (isNaN(amount) || amount <= 0) {
             showAlert("유효한 수량을 입력하세요.");
             return;
@@ -578,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const market = stockData[ticker];
 
-            // [방어 2] 마켓/가격 검사 (NaN, undefined, type)
+            // 마켓/가격 검사 (NaN, undefined, type)
             if (!market || market.isDelisted || typeof market.price !== 'number' || isNaN(market.price)) {
                 showAlert("현재 거래할 수 없는 종목입니다. (가격 정보 오류)");
                 return; // 트랜잭션 중단
@@ -587,14 +531,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = market.price;
             const cost = (price * amount) * (1 + FEE_RATE);
 
-            // [방어 3] 비용(cost) 계산 검사 (FEE_RATE가 undefined일 경우)
+            // 비용(cost) 계산 검사 (FEE_RATE가 undefined일 경우)
             if (isNaN(cost)) {
                 console.error("비용(cost) 계산 실패. FEE_RATE가 정의되었는지 확인하세요.");
                 showAlert("거래 비용 계산에 실패했습니다. (FEE_RATE 오류)");
                 return; // 트랜잭션 중단
             }
             
-            // [방어 4] 현금 '정화' (DB에 NaN이 저장된 경우)
+            // 현금 '정화' (DB에 NaN이 저장된 경우)
             let currentCash = Number(currentPlayerData.cash);
             if (isNaN(currentCash)) { currentCash = 0; }
 
@@ -603,14 +547,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return; // 트랜잭션 중단
             }
 
-            // [방어 5] stocks 객체에 티커가 없는 경우 (Admin Reset 이후)
+            // stocks 객체에 티커가 없는 경우 (Admin Reset 이후)
             if (!currentPlayerData.stocks[ticker]) {
                 currentPlayerData.stocks[ticker] = { shares: 0, averagePrice: 0 };
             }
 
             const stock = currentPlayerData.stocks[ticker];
             
-            // [방어 6] 보유량/평단가 '정화' (DB에 NaN이 저장된 경우)
+            // 보유량/평단가 '정화' (DB에 NaN이 저장된 경우)
             let currentShares = Number(stock.shares);
             if (isNaN(currentShares)) { currentShares = 0; }
             
@@ -628,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stock.shares = newTotalShares;
             stock.averagePrice = newAveragePrice; 
 
-            // [방어 7] history 로그 추가 (history가 undefined일 경우 방어)
+            // history 로그 추가 (history가 undefined일 경우 방어)
             addHistoryLogToPlayer(currentPlayerData, 
                 `[매수] ${market.name || ticker} (${ticker}) ${amount}주 (총 ${formatCurrency(cost)})`, 
                 'buy'
@@ -637,16 +581,12 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then((result) => {
             if (!result.committed) { 
-                // (트랜잭션 내부에서 이미 알림을 띄웠으므로, 여기서는 .catch()만 처리)
+                // (트랜잭션 내부에서 이미 알림을 띄웠으므로 여기서는 .catch()만 처리)
             }
         })
-        .catch((error) => {
-             // (이곳이 Error: set이 잡히는 곳)
-             console.error("Firebase 매수 트랜잭션 오류 (Promise):", error);
-             showAlert("매수 실패. DB 오류가 발생했습니다. (NaN 또는 undefined 저장 시도)");
-        });
     }
 
+    // 전액 매수
     function handleBuyMax() {
         const ticker = currentTicker;
 
@@ -655,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const market = stockData[ticker];
 
-            // [방어 1] 마켓/가격 검사
+            // 마켓/가격 검사
             if (!market || market.isDelisted || typeof market.price !== 'number' || isNaN(market.price)) {
                 showAlert("현재 거래할 수 없는 종목입니다. (가격 정보 오류)");
                 return; 
@@ -664,18 +604,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = market.price;
             const pricePerShare = price * (1 + FEE_RATE); // 수수료 포함 1주당 가격
 
-            // [방어 2] 비용(cost) 계산 검사 (FEE_RATE가 undefined일 경우)
+            // 비용(cost) 계산 검사 (FEE_RATE가 undefined일 경우)
             if (isNaN(pricePerShare)) {
                 console.error("1주당 비용(pricePerShare) 계산 실패. FEE_RATE가 정의되었는지 확인하세요.");
                 showAlert("거래 비용 계산에 실패했습니다. (FEE_RATE 오류)");
                 return;
             }
             
-            // [방어 3] 현금 '정화'
+            // 현금 '정화'
             let currentCash = Number(currentPlayerData.cash);
             if (isNaN(currentCash)) { currentCash = 0; }
 
-            // ▼▼▼ [핵심 로직] 최대 수량 계산 ▼▼▼
+            // 최대 수량 계산
             const maxAmount = Math.floor(currentCash / pricePerShare);
             
             if (maxAmount <= 0) {
@@ -685,18 +625,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 실제 총 비용 계산
             const totalCost = maxAmount * pricePerShare;
-            // (이론상 currentCash < totalCost는 발생하지 않아야 함)
-            // ▲▲▲ [핵심 로직] 끝 ▲▲▲
+            // (이론상 currentCash < totalCost는 발생 x)
 
 
-            // [방어 4] stocks 객체에 티커가 없는 경우
+            // stocks 객체에 티커가 없는 경우
             if (!currentPlayerData.stocks[ticker]) {
                 currentPlayerData.stocks[ticker] = { shares: 0, averagePrice: 0 };
             }
 
             const stock = currentPlayerData.stocks[ticker];
             
-            // [방어 5] 보유량/평단가 '정화'
+            // 보유량/평단가 '정화'
             let currentShares = Number(stock.shares);
             if (isNaN(currentShares)) { currentShares = 0; }
             
@@ -713,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stock.shares = newTotalShares;
             stock.averagePrice = newAveragePrice; 
 
-            // [방어 6] history 로그 추가
+            // history 로그 추가
             addHistoryLogToPlayer(currentPlayerData, 
                 `[전액 매수] ${market.name || ticker} (${ticker}) ${maxAmount}주 (총 ${formatCurrency(totalCost)})`, 
                 'buy'
@@ -723,15 +662,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then((result) => {
             if (!result.committed) { /* (내부 알림) */ }
         })
-        .catch((error) => {
-             console.error("Firebase 전액 매수 트랜잭션 오류 (Promise):", error);
-             showAlert("전액 매수 실패. DB 오류가 발생했습니다. (NaN 또는 undefined 저장 시도)");
-        });
     }
 
-    /**
-     * [최종 수정본] 매도 (NaN, TypeError, Error: set 방어)
-     */
+    // 매도
     function handleSellStock() {
         const amount = parseInt(els.amount.value, 10);
         const ticker = currentTicker;
@@ -746,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const stock = currentPlayerData.stocks[ticker];
             
-            // [방어 1, 2, 3] 현금, 주식, 평단가 '정화'
+            // 현금, 주식, 평단가 '정화'
             let currentShares = Number(stock ? stock.shares : 0);
             if (isNaN(currentShares)) { currentShares = 0; }
             
@@ -756,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentCash = Number(currentPlayerData.cash);
             if (isNaN(currentCash)) { currentCash = 0; }
 
-            // [방어 4] 보유량 검사 (정화된 값 기준)
+            // 보유량 검사 (정화된 값 기준)
             if (currentShares <= 0) {
                 showAlert("보유하지 않은 종목입니다.");
                 return;
@@ -767,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const market = stockData[ticker];
-            // [방어 5] 마켓/가격 검사
+            // 마켓/가격 검사
             if (!market || market.isDelisted || typeof market.price !== 'number' || isNaN(market.price)) {
                 showAlert("현재 거래할 수 없는 종목입니다. (가격 정보 오류)");
                 return;
@@ -776,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = market.price; 
             const revenue = (price * amount) * (1 - FEE_RATE); 
             
-            // [방어 6] 수익(revenue) 계산 검사 (FEE_RATE)
+            // 수익(revenue) 계산 검사 (FEE_RATE)
             if (isNaN(revenue)) {
                 console.error("수익(revenue) 계산 실패. FEE_RATE가 정의되었는지 확인하세요.");
                 showAlert("거래 수익 계산에 실패했습니다. (FEE_RATE 오류)");
@@ -793,7 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 stock.averagePrice = 0;
             }
 
-            // [방어 7] history 로그 추가
+            // history 로그 추가
             addHistoryLogToPlayer(currentPlayerData, 
                 `[매도] ${market.name || ticker} (${ticker}) ${amount}주 (실현손익: ${formatCurrency(profit)})`, 
                 'sell'
@@ -801,23 +734,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return currentPlayerData;
         })
         .then((result) => {
-             if (!result.committed) { /* (내부 알림) */ }
+             if (!result.committed) {}
         })
-        .catch((error) => {
-             console.error("Firebase 매도 트랜잭션 오류 (Promise):", error);
-             showAlert("매도 실패. DB 오류가 발생했습니다. (NaN 또는 undefined 저장 시도)");
-        });
     }
 
+    // 전액 매도
     function handleSellAll() {
         
-        // 1. [복원] showConfirm() 확인 절차
-        // (showConfirm이 <br> 태그를 지원하도록 수정되었음)
+        // 경고 창
         const confirmMsg = "🚨 경고 🚨<br><br>보유한 모든 주식을 현재 시장가로 즉시 매도합니다.<br>(상장 폐지 등 거래 불가 종목 제외)<br><br>정말로 실행하시겠습니까?";
         
+        // 확인 시 실행
         showConfirm(confirmMsg, () => {
             
-            // 2. 확인 시 트랜잭션 실행
             playerRef.transaction((currentPlayerData) => {
                 if (!currentPlayerData) return;
 
@@ -829,48 +758,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 let totalProfit = 0;  // 총 실현 손익
                 let soldCount = 0;    // 매도한 종목 수
 
-                // [방어 1] 현금 정화 (NaN 방지)
+                // 현금 정화 (NaN 방지)
                 let currentCash = Number(currentPlayerData.cash);
                 if (isNaN(currentCash)) { currentCash = 0; }
                 
-                // [방어 2] history 정화 (TypeError 방지)
+                // history 정화 (TypeError 방지)
                 if (!Array.isArray(currentPlayerData.history)) {
                     currentPlayerData.history = [];
                 }
 
-                // 3. 보유한 모든 주식 티커를 순회
+                // 보유한 모든 주식 티커를 순회
                 for (const ticker in currentPlayerData.stocks) {
                     const stock = currentPlayerData.stocks[ticker];
                     
-                    // [방어 3] 주식 객체 및 보유량 정화
+                    //주식 객체 및 보유량 정화
                     let currentShares = Number(stock ? stock.shares : 0);
                     if (isNaN(currentShares)) { currentShares = 0; }
                     
                     let currentAvgPrice = Number(stock ? stock.averagePrice : 0);
                     if (isNaN(currentAvgPrice)) { currentAvgPrice = 0; }
 
-                    // 4. 매도할 주식이 1주 이상 있는지 확인
+                    // 매도할 주식이 1주 이상 있는지 확인
                     if (currentShares > 0) {
                         const market = stockData[ticker];
 
-                        // [방어 4] 마켓/가격 검사 (거래 가능한지)
+                        // 마켓/가격 검사 (거래 가능한지)
                         if (market && !market.isDelisted && typeof market.price === 'number' && !isNaN(market.price)) {
                             
                             const price = market.price;
                             const revenue = (price * currentShares) * (1 - FEE_RATE);
                             
-                            // [방어 5] 수익(revenue) 계산 검사 (FEE_RATE)
+                            //수익 계산 검사
                             if (isNaN(revenue)) {
                                 console.error(`[전액 매도] ${ticker} 수익(revenue) 계산 실패. FEE_RATE 확인.`);
                                 continue; // 이 종목은 건너뜀
                             }
                             
-                            // 5. 총 수익 및 실현 손익 누적
+                            // 총 수익 및 실현 손익 누적
                             totalRevenue += revenue;
                             totalProfit += (price - currentAvgPrice) * currentShares - (price * currentShares * FEE_RATE);
                             soldCount++;
 
-                            // 6. 주식 보유량 0으로 초기화
+                            // 주식 보유량 0으로 초기화
                             stock.shares = 0;
                             stock.averagePrice = 0;
 
@@ -879,9 +808,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.log(`[전액 매도] ${ticker}는 거래 불가 상태이므로 건너뜁니다.`);
                         }
                     }
-                } // for-loop 끝
+                }
 
-                // 7. 최종 결과 적용
+                // 최종 결과 적용
                 if (soldCount > 0) {
                     currentPlayerData.cash = currentCash + totalRevenue;
                     
@@ -900,16 +829,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!result.committed) {
                     // (매도할 주식이 없을 때의 알림은 유지)
                     showAlert("매도할 수 있는 주식이 없습니다.");
-                } else {
-                    // (완료 알림은 사용자가 삭제 요청했으므로 복원하지 않음)
-                }
+                } 
             })
             .catch((error) => {
                  console.error("Firebase 전액 매도 트랜잭션 오류 (Promise):", error);
                  showAlert("전액 매도 실패. DB 오류가 발생했습니다. (NaN 또는 undefined 저장 시도)");
             });
 
-        }); // 3. [복원] showConfirm 닫는 괄호
+        });
     }
     
     /**
@@ -917,8 +844,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} ticker 청산할 주식 티커
      */    
     function handleForceLiquidate(ticker) {
-        // 이 함수는 setupMarketListener에 의해 1초마다 호출될 수 있습니다.
-        // 하지만 트랜잭션 내부의 'shares > 0' 체크가 단 1회만 실행되도록 보장합니다.
 
         const market = stockData[ticker];
         
@@ -981,9 +906,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * [수정] 관리자 리셋 (마켓 + 본인 계정)
-     */
+    // 관리자 리셋
     function handleAdminReset() {
         const password = prompt("관리자 비밀번호를 입력하세요 (기본값: admin):");
         if (password === 'ILoveCat') { 
@@ -993,10 +916,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const initialState = createInitialMarketState(); 
                     
-                    // 작업 1: 마켓 리셋
+                    // 마켓 리셋
                     const marketResetPromise = marketRef.child('stocks').set(initialState);
                     
-                    // 작업 2: '나'의 플레이어 데이터 삭제
+                    // 플레이어 데이터 삭제
                     const playerResetPromise = playerRef.remove(); 
 
                     Promise.all([marketResetPromise, playerResetPromise])
@@ -1019,6 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 뉴스 작성
     function handlePostNews() {
         if (!els.adminNewsContent) return;
 
@@ -1029,7 +953,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // DB의 '/news' 경로에 새 항목을 push (고유 ID 생성)
+        // DB에 새 항목 생성
         const newsRef = db.ref('news');
         newsRef.push({
             timestamp: firebase.database.ServerValue.TIMESTAMP,
@@ -1045,6 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 주가 조작 
     function handleAdminStockManipulate() {
         if (!els.adminStockTicker || !els.adminStockPrice) return;
 
@@ -1059,10 +984,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showAlert("올바른 가격(숫자)을 입력하세요.");
             return;
         }
-
-        // ▼▼▼ [경로 수정] 'market/stock/' + ticker ▼▼▼
+        
         const stockRef = db.ref(`market/stocks/${ticker}`);
-        // ▲▲▲ [경로 수정] ▲▲▲
         
         stockRef.transaction((currentStockData) => {
             
@@ -1092,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 history: currentHistory
             };
             
-        }, (error, committed, snapshot) => {
+        }, (error, committed) => {
             if (error) {
                 console.error("주가 설정 (트랜잭션) 오류:", error);
                 showAlert(`주가 설정에 실패했습니다. (오류: ${error.message})`);
@@ -1106,9 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * 인증: 구글 로그인
-     */
+    // 로그인 인증
     function signInWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch((error) => {
@@ -1117,16 +1038,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * 인증: 로그아웃
-     */
+    // 로그 아웃
     function signOut() {
         auth.signOut();
     }
 
 
-    // === 9. Bank Logic ===
-    
+    // 은행
+    // 은행 보이기
     function showBankModal() {
         if (!state.bank) { // 혹시 bank 객체가 없으면 생성
             state.bank = { checking: 0, savings: 0, loan: 0, loanRepay: 0, savingsTimestamp: null, loanTimestamp: null };
@@ -1181,20 +1100,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; 
                 }
                 
-                // [체크 1] 대출 중 예금 방지
+                // 대출 중 예금 방지
                 if (currentPlayerData.bank.loan > 0) {
                     showAlert("대출이 있는 상태에서는 예금할 수 없습니다.");
                     return;
                 }
                 
-                // ▼▼▼ [신규] 추가 예금 방지 로직 ▼▼▼
                 if (currentSavings > 0) {
                     showAlert("이미 예금이 있습니다. 전액 인출 후 다시 시도하세요. (추가 예금 불가)");
                     return;
                 }
-                // ▲▲▲ [신규] ▲▲▲
 
-                // [체크 3] 현금 부족
+                // 현금 부족
                 if (currentCash < amount) {
                     showAlert("예금할 현금이 부족합니다.");
                     return;
@@ -1209,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPlayerData.bank.savings = currentSavings + amount; // (currentSavings는 0이어야 함)
                 currentPlayerData.bank.savingsTimestamp = firebase.database.ServerValue.TIMESTAMP; 
                 
-            // --- 2. 전액 인출 (Withdraw) ---
+            // 전액 인출
             } else if (type === 'withdraw') {
                 if (currentSavings <= 0) {
                     showAlert("인출할 예금이 없습니다.");
@@ -1224,17 +1141,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentTime = Date.now(); // 현재 시간 (밀리초)
                     const elapsedMilliseconds = currentTime - depositTime; // 경과 시간 (밀리초)
 
-                    // --- 설정값 ---
                     const INTEREST_RATE = 0.02; // 이자율 (2%)
-                    const COMPOUNDING_INTERVAL_MS = 50 * 60 * 1000; // 50분 (밀리초)
-                    // ---------------
+                    const COMPOUNDING_INTERVAL_MS = 10 * 60 * 1000; // 50분 (밀리초)
 
-                    // ▼▼▼ [수정됨] ▼▼▼
-                    // 총 몇 번의 10분(이자 지급 횟수)이 지났는지 '소수점'으로 계산 (Math.floor 제거)
-                    // 예: 15분 지났으면 1.5, 5분 지났으면 0.5
                     const compoundingPeriods = elapsedMilliseconds / COMPOUNDING_INTERVAL_MS;
-                    // ▲▲▲ [수정됨] ▲▲▲
-
                     if (compoundingPeriods > 0) {
                         // 복리 계산: 원금 * (1 + 이자율)^기간
                         // compoundingPeriods가 1.5 같은 소수점이어도 Math.pow가 알아서 계산해 줍니다.
@@ -1250,17 +1160,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const earnedInterest = roundedFinalAmount - currentSavings;
 
                         if (earnedInterest > 0) {
-                            // ▼▼▼ [수정됨] ▼▼▼
                             // 알림 메시지를 '횟수'가 아닌 '총 경과 시간(분)'으로 변경
                             const elapsedMinutes = elapsedMilliseconds / (60 * 1000); 
                             showAlert(`총 ${elapsedMinutes.toFixed(1)}분 경과에 대한 복리 이자가 적용되어\n${earnedInterest.toLocaleString()}원을 추가로 받았습니다!`);
-                            // ▲▲▲ [수정됨] ▲▲▲
                         }
                     }
                 }
-                
-                // (중도 인출 페널티 로직 삭제됨)
-
                 currentPlayerData.cash = currentCash + amountToReceive;
                 currentPlayerData.bank.savings = 0;
                 currentPlayerData.bank.savingsTimestamp = null;
@@ -1268,12 +1173,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return currentPlayerData;
         })
-        .catch((error) => {
-            console.error("은행 예금/인출 트랜잭션 오류:", error);
-            showAlert("은행 예금/인출에 실패했습니다. (DB 오류)");
-        });
     }
 
+    // 대출
     function handleBankLoan(type) {
         
         const now = Date.now(); 
@@ -1288,7 +1190,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentCash = Number(currentPlayerData.cash) || 0;
             let currentLoan = Number(currentPlayerData.bank.loan) || 0;
 
-            // --- 1. 대출 (Loan) ---
             if (type === 'loan') {
                 
                 // (쿨타임 체크)
@@ -1322,28 +1223,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // ▼▼▼ [수정] 이자 로직 변경 ▼▼▼
-                const interest = amount * 0.20; // 이자 (예: 2,000원)
-                const totalDebt = amount + interest; // 총 부채 (예: 12,000원)
+                const interest = amount * 0.20; 
+                const totalDebt = amount + interest; 
                 
-                // (수수료를 떼지 않고 요청 금액(amount)을 그대로 입금)
-                currentPlayerData.cash = currentCash + amount; // (예: 10,000원 받음)
+                currentPlayerData.cash = currentCash + amount; 
                 
-                // (부채는 이자가 포함된 금액으로 기록)
-                currentPlayerData.bank.loan = totalDebt; // (예: 12,000원 갚아야 함)
-                // ▲▲▲ [수정] ▲▲▲
-                
+                currentPlayerData.bank.loan = totalDebt; 
                 currentPlayerData.bank.loanTimestamp = firebase.database.ServerValue.TIMESTAMP;
                 currentPlayerData.bank.loanRepayTimestamp = null; 
                 
 
-            // --- 2. 전액 상환 (Repay) ---
+            // 전액 상환
             } else if (type === 'repay') {
                 if (currentLoan <= 0) {
                     showAlert("상환할 대출금이 없습니다.");
                     return;
                 }
-                // (currentLoan은 이제 120% 금액이므로 이 로직은 그대로 유지)
                 if (currentCash < currentLoan) {
                     showAlert("대출금 전액을 상환할 현금이 부족합니다.");
                     return;
@@ -1357,10 +1252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return currentPlayerData;
         })
-        .catch((error) => {
-            console.error("은행 대출/상환 트랜잭션 오류:", error);
-            showAlert("은행 대출/상환에 실패했습니다. (DB 오류)");
-        });
     }
 
 
@@ -1375,13 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const bank = currentPlayerData.bank;
-            let logMessages = [];
-            
-            // (단리 이자 지급을 위한 currentCash 변수 제거)
-            // let currentCash = Number(currentPlayerData.cash) || 0;
-            
-            // --- 1. 예금 이자 (10분마다 % 복리) ---
-            const TEN_MINUTES_MS = 50 * 60 * 1000;
+            const TEN_MINUTES_MS = 10 * 60 * 1000;
             const savings = Number(bank.savings) || 0;
             const savingsTime = bank.savingsTimestamp;
 
@@ -1389,27 +1274,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const interest = savings * 0.03;
                 
-                // ▼▼▼ [수정] 단리(현금 지급) -> 복리(원금에 더하기) ▼▼▼
                 bank.savings += interest; 
-                // (currentPlayerData.cash = currentCash + interest; 코드 삭제)
-                // ▲▲▲ [수정] ▲▲▲
 
                 bank.savingsTimestamp = now; // 타이머 리셋
                 
             }
-
-            // --- 2. 대출 이자 ( 시작 20% and 10분 쿨타임 ) ---
-            const loan = Number(bank.loan) || 0;
-
             return currentPlayerData;
         });
     }
 
     function promptBankruptConfirmation() {
         const message = "정말로 파산을 신청하시겠습니까? 모든 자산(주식, 예금)이 청산되며, 현금 300만, 대출 500만으로 시작합니다. (10분 쿨타임 적용)";
-        
-        // 기존 확인 모달(showConfirmation)을 호출하고,
-        // '확인' 버튼을 누르면 실행될 콜백 함수로 'handleBankrupt'를 전달
         showConfirm(message, handleBankrupt);
     }
 
@@ -1419,7 +1294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playerRef.transaction((currentPlayerData) => {
             if (!currentPlayerData) return;
 
-            // [수정] DB '정화' (bankruptTimestamp 필드 확인)
             if (!currentPlayerData.bank) {
                 currentPlayerData.bank = { 
                     savings: 0, savingsTimestamp: null, 
@@ -1427,8 +1301,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     loanRepayTimestamp: null, bankruptTimestamp: null 
                 };
             }
-
-            // --- 1. 10분 쿨타임 체크 (이 로직은 올바름) ---
             const bankruptTime = currentPlayerData.bank.bankruptTimestamp;
             const TEN_MINUTES_MS = 10 * 60 * 1000;
             
@@ -1439,52 +1311,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const seconds = remainingSeconds % 60;
                 
                 showAlert(`파산 신청 쿨타임 중입니다. (남은 시간: ${minutes}분 ${seconds}초)`);
-                return; // 트랜잭션 중단
+                return; 
             }
             
-            // --- 2. [버그 수정] 새 객체를 반환(return)하는 대신,
-            //          currentPlayerData를 *직접 수정*합니다. ---
-
-            // 주식 초기화
             const initialPlayerStocks = {};
             allTickers.forEach(ticker => {
                 initialPlayerStocks[ticker] = { shares: 0, averagePrice: 0 };
             });
             currentPlayerData.stocks = initialPlayerStocks;
             
-            // 현금 초기화
             currentPlayerData.cash = 3000000; // (파산 구제금)
 
-            // 은행 초기화 (bank 객체를 통째로 교체)
             currentPlayerData.bank = {
-                // (제공해주신 파산 설정값)
                 checking: 0, 
                 savings: 0, 
-                loan: 5000000, // (파산 대출)
+                loan: 5000000,
                 savingsTimestamp: null, 
                 loanTimestamp: null,
-                loanRepayTimestamp: null, // (다른 필드도 유지)
-
-                // ▼▼▼ [핵심 버그 수정] 쿨타임 *저장* ▼▼▼
+                loanRepayTimestamp: null,
                 bankruptTimestamp: now
-                // ▲▲▲ [핵심 버그 수정] ▲▲▲
             };
 
-            // (선택사항) 히스토리 로그 추가
             addHistoryLogToPlayer(currentPlayerData, 
                 '[파산] 파산을 신청하여 모든 자산이 초기화되었습니다. (구제금 300만, 대출 500만)', 
                 'system'
             );
-
-            // [버그 수정] 덮어쓰지 않고, *수정된* currentPlayerData를 반환
             return currentPlayerData;
         })
-        .catch((error) => {
-            console.error("파산 신청 트랜잭션 오류:", error);
-            showAlert("파산 신청에 실패했습니다. (DB 오류)");
-        });
     }
     
+    // 예금
     function handleBankSave(type) {
         
         playerRef.transaction((currentPlayerData) => {
@@ -1495,8 +1351,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             let currentCash = Number(currentPlayerData.cash) || 0;
             let currentSavings = Number(currentPlayerData.bank.savings) || 0;
-
-            // --- 1. 예금 (Save) ---
             if (type === 'save') {
                 let amount = Number(els.saveAmount.value);
                 if (isNaN(amount) || amount <= 0) {
@@ -1504,31 +1358,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; 
                 }
                 
-                // [체크 1] 대출 중 예금 방지
                 if (currentPlayerData.bank.loan > 0) {
                     showAlert("대출이 있는 상태에서는 예금할 수 없습니다.");
                     return;
                 }
-                
-                // ▼▼▼ [신규] 추가 예금 방지 로직 ▼▼▼
                 if (currentSavings > 0) {
                     showAlert("이미 예금이 있습니다. 전액 인출 후 다시 시도하세요. (추가 예금 불가)");
                     return;
                 }
-                // ▲▲▲ [신규] ▲▲▲
-
-                // [체크 3] 현금 부족
                 if (currentCash < amount) {
                     showAlert("예금할 현금이 부족합니다.");
                     return;
                 }
 
                 currentPlayerData.cash = currentCash - amount;
-                currentPlayerData.bank.savings = currentSavings + amount; // (currentSavings는 0이어야 함)
+                currentPlayerData.bank.savings = currentSavings + amount;
                 currentPlayerData.bank.savingsTimestamp = firebase.database.ServerValue.TIMESTAMP; 
                 
 
-            // --- 2. 전액 인출 (Withdraw) ---
+            // 전액 인출
             } else if (type === 'withdraw') {
                 if (currentSavings <= 0) {
                     showAlert("인출할 예금이 없습니다.");
@@ -1536,8 +1384,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 let amountToReceive = currentSavings;
-                
-                // (중도 인출 페널티 로직 삭제됨)
 
                 currentPlayerData.cash = currentCash + amountToReceive;
                 currentPlayerData.bank.savings = 0;
@@ -1546,83 +1392,58 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return currentPlayerData;
         })
-        .catch((error) => {
-            console.error("은행 예금/인출 트랜잭션 오류:", error);
-            showAlert("은행 예금/인출에 실패했습니다. (DB 오류)");
-        });
     }
 
-    
-    // === 10. Time Attack Logic ===
-    
+    // 타임 어택
     function handleStartTimeAttack() {
         if (timeAttackTimer) {
             return showAlert("타임 어택이 이미 진행 중입니다.");
         }
         
-        const confirmMsg = "30분 타임 어택을 시작하시겠습니까?<br><br>현재 게임(현금, 주식, 은행)이 안전하게 저장된 후, 초기 자본으로 새 게임을 시작합니다.";
+        const confirmMsg = "7분 타임 어택을 시작하시겠습니까?<br><br>현재 게임(현금, 주식, 은행)이 안전하게 저장된 후, 초기 자본으로 새 게임을 시작합니다.";
         
         showConfirm(confirmMsg, () => {
                 
             playerRef.transaction((currentPlayerData) => {
                 if (!currentPlayerData) return; 
-
-                // (중복 실행 방지)
                 if (currentPlayerData.timeAttack && currentPlayerData.timeAttack.isInTimeAttack) {
-                    // 여기서 return하면 .then()으로 넘어가지 않고 aborted 됩니다.
                     return; 
                 }
-                // (스냅샷 오류 방지)
                 if (currentPlayerData.snapshot) {
-                    // 이미 스냅샷이 있다는 건 이전 복구가 안 됐다는 뜻
                     return; 
                 }
-
-                // 1. 현재 게임 데이터를 'snapshot'에 백업
+                // 현재 데이터 백업
                 const snapshotData = {
                     cash: currentPlayerData.cash,
                     stocks: currentPlayerData.stocks,
                     bank: currentPlayerData.bank
                 };
                 
-                // 2. 새 게임 상태 로드
+                // 새 게임 상태 로드
                 const newGameState = createInitialGameState();
                 
-                // 3. 현재 데이터를 -> 새 게임 데이터로 덮어쓰기
+                // 현재 데이터를 -> 새 게임 데이터로 덮어쓰기
                 currentPlayerData.snapshot = snapshotData; 
                 currentPlayerData.cash = newGameState.cash;
                 currentPlayerData.stocks = newGameState.stocks;
                 currentPlayerData.bank = newGameState.bank;
                 
-                // 4. 타임 어택 상태 설정
+                // 타임 어택 상태 설정
                 currentPlayerData.timeAttack.isInTimeAttack = true;
                 
-                // ▼▼▼ [수정 1] 서버 시간 대신 '내 기기 시간' 사용 (리스너와 기준 통일) ▼▼▼
                 currentPlayerData.timeAttack.startTime = Date.now(); 
-                // ▲▲▲ [수정 1] ▲▲▲
-                
+
                 currentPlayerData.timeAttack.endTime = null;
 
                 return currentPlayerData;
             })
             .then((result) => {
                 if (result.committed) {
-                    // ▼▼▼ [수정 2] UI/타이머 코드는 전부 삭제! (리스너가 알아서 함) ▼▼▼
-                    showAlert("✅ 타임 어택 시작!", "30분간 초기 자본으로 최대 수익에 도전하세요.<br>기존 데이터는 안전하게 보관됩니다.");
-                    
-                    // 여기서 startTimeAttackTimer나 버튼 조작을 하지 마세요.
-                    // 데이터가 DB에 기록되는 순간, playerRef.on 리스너가 감지하고 
-                    // 자동으로 타이머를 켜고 버튼을 비활성화합니다.
-                    // ▲▲▲ [수정 2] ▲▲▲
+                    showAlert("✅ 타임 어택 시작!", "7분간 초기 자본으로 최대 수익에 도전하세요.<br>기존 데이터는 안전하게 보관됩니다."); 
                 } else {
-                    // transaction 함수 내에서 return; 되어 갱신되지 않은 경우
                     showAlert("타임 어택을 시작할 수 없습니다.", "이미 진행 중이거나 데이터 오류가 있습니다.");
                 }
             })
-            .catch((error) => {
-                console.error("타임 어택 시작 트랜잭션 오류:", error);
-                showAlert("타임 어택 시작에 실패했습니다. (DB 오류)");
-            });
         });
     }
 
@@ -1657,12 +1478,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playerRef.transaction((currentPlayerData) => {
             if (!currentPlayerData) return;
 
-            // (이미 종료 처리가 된 경우 중단)
             if (!currentPlayerData.timeAttack || !currentPlayerData.timeAttack.isInTimeAttack) {
                 return; 
             }
-            
-            // [치명적 오류 방어]
             if (!currentPlayerData.snapshot) {
                 console.error("심각한 오류: 타임 어택 종료 시 스냅샷 데이터가 없습니다!");
                 // (데이터 복구 불가능 -> 타임어택 상태만이라도 강제 종료)
@@ -1726,13 +1544,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.timeAttack || !state.timeAttack.isInTimeAttack) return;
 
         showConfirm("타임 어택을 취소하시겠습니까?", () => {
-            // ▼ UI/타이머 조작 코드 제거! (리스너가 알아서 함) ▼
-            // if (timeAttackTimer) clearInterval(timeAttackTimer); (삭제 가능)
+            // UI/타이머 조작 코드 제거 (리스너가 알아서 함) 
             
             playerRef.transaction((currentPlayerData) => {
                 if (!currentPlayerData) return;
                 
-                // 스냅샷 복구 로직 (이전과 동일)
+                // 스냅샷 복구 로직
                 if (currentPlayerData.snapshot) {
                     const restored = currentPlayerData.snapshot;
                     currentPlayerData.cash = restored.cash;
@@ -1741,7 +1558,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentPlayerData.snapshot = null;
                 }
                 
-                // ★ 핵심: 상태만 바꾸면 리스너가 알아서 "꺼짐" 상태로 전환함
+                // 상태만 바꾸면 리스너가 알아서 꺼짐 상태로 전환
                 currentPlayerData.timeAttack.isInTimeAttack = false;
                 currentPlayerData.timeAttack.startTime = null;
                 currentPlayerData.timeAttack.endTime = null;
@@ -1749,7 +1566,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return currentPlayerData;
             }).then(() => {
                 showAlert("타임 어택이 취소되었습니다.");
-                // els.timeAttackBtn... 등의 UI 조작도 리스너의 else 블록에서 처리되므로 제거 가능
             });
         });
     }
@@ -1757,13 +1573,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // === 11. Ranking Logic ===
 
         // 1. (총 자산) 'players' 노드 전체를 감시
-        function setupNetWorthListener() {
-            const playersRef = db.ref('players');
-            playersRef.on('value', (snapshot) => {
-                allPlayersData = snapshot.val() || {}; // 모든 플레이어 데이터 전역 저장
-                updateNetWorthRankings(); // 플레이어 데이터 변경 시 랭킹 갱신
-            });
-        }
+    function setupNetWorthListener() {
+        const playersRef = db.ref('players');
+        playersRef.on('value', (snapshot) => {
+            allPlayersData = snapshot.val() || {}; // 모든 플레이어 데이터 전역 저장
+            updateNetWorthRankings(); // 플레이어 데이터 변경 시 랭킹 갱신
+        });
+    }
 
     // 2. (타임 어택) 'leaderboard' 노드를 감시
     function setupTimeAttackListener() {
@@ -1816,6 +1632,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // (타임 어택) 랭킹 계산 함수
+    function updateTimeAttackRankings(){
+        if (!allPlayersData || !Object.keys(stockData).length) {
+            return; // 데이터 미비
+        }
+        
+        const rankings = [];
+        for (const uid in allPlayersData) {
+            const player = allPlayersData[uid];
+            
+            const score = player.timeAttack.lastScore;
+            rankings.push({
+                name: player.displayName || "Anonymous",
+                score: score
+            });
+        }
+        
+        rankings.sort((a, b) => b.score - a.score);
+        timeAttackRankings = rankings;
+    }
+
     // 4. 랭킹 탭 전환 함수
     function switchRankView(view) {
         if (view === currentRankView) return; 
@@ -1834,6 +1671,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         renderRankings();
+        updateTimeAttackRankings();
     }
     
     // 5. 랭킹 UI 렌더링 함수
@@ -1890,13 +1728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.adminModal.classList.remove('flex');
     }
 
-    
-    // === 12. UI Update Logic ===
-
-    /**
-     * 메인 UI 업데이트 (플레이어 데이터 기준)
-     */
-
+    // 메인 ui 업데이트
     function updateUI() {
         if (!state || !els.cash) return;
         
@@ -1924,9 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
     }
 
-    /**
-     * 포트폴리오 UI 갱신 (가장 빈번)
-     */
+    // 포폴 ui 갱신
     function updatePortfolioUI() {
         if (!state.stocks || !stockData) return;
         
@@ -1993,7 +1823,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
         const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-        // --- 1. 예금 정보 갱신 (10분) ---
         if (els.bankSavingsAmount) {
             const savings = Number(bank.savings) || 0; // 예금 원금
             const savingsTime = bank.savingsTimestamp; // 예금 시작 시간
@@ -2015,8 +1844,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const minutes = Math.floor(remainingSeconds / 60);
                 const seconds = remainingSeconds % 60;
 
-                // 10:00 (시작) ~ 00:00 (거의 도달) 형태로 표시
-                // (참고: 10분이 딱 되는 0.001초간 10:00으로 표시될 수 있음)
                 if (minutes === 10 && seconds === 0) {
                     els.bankNextInterestTimer.textContent = "10:00";
                 } else {
@@ -2030,11 +1857,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // (소수점 버림)
                 els.bankNextInterest.textContent = `+ ${formatCurrency(Math.floor(nextInterest))}`;
-                // ----------------------------------------------------
             }
         }
 
-        // --- 2. 대출 정보 갱신 (상환금 / 10분 쿨타임) ---
+        // 대출 정보 갱신
         if (els.bankLoanAmount) {
             const loan = Number(bank.loan) || 0;
             const repayTime = bank.loanRepayTimestamp;
@@ -2063,7 +1889,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // ▼▼▼ [신규] 3. 파산 쿨타임 갱신 (10분) ▼▼▼
+        // 파산 쿨타임(10분)
         if (els.bankruptCooldownTimer) {
             const bankruptTime = bank.bankruptTimestamp;
 
@@ -2087,7 +1913,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        // ▲▲▲ [신규] 3. 파산 로직 끝 ▲▲▲
     }
 
     function formatTimeAgo(timestamp) {
@@ -2122,7 +1947,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // "개발 중입니다..." <p> 태그를 포함한 기존 내용 비우기
         els.newsBox.innerHTML = ''; 
 
         if (!newsData) {
@@ -2163,14 +1987,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * 종목 리스트 탭 전환
-     */
+    // 종목 변경
     function switchView(view) {
         currentView = view;
         
-        // 탭 스타일 업데이트
-        // [수정] showCoinsBtn 추가
         [els.showStocksBtn, els.showAssetsBtn, els.showBondsBtn, els.showCoinsBtn, els.showMiscBtn].forEach(btn => {
             btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
             btn.classList.add('bg-white', 'text-slate-500', 'hover:bg-slate-100');
@@ -2180,7 +2000,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'stocks') activeBtn = els.showStocksBtn;
         else if (view === 'assets') activeBtn = els.showAssetsBtn;
         else if (view === 'bonds') activeBtn = els.showBondsBtn;
-        else if (view === 'coins') activeBtn = els.showCoinsBtn; // <-- [신규] 코인 뷰
+        else if (view === 'coins') activeBtn = els.showCoinsBtn; 
         else activeBtn = els.showMiscBtn;
         
         activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
@@ -2189,9 +2009,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStockList();
     }
     
-    /**
-     * 종목 리스트 렌더링
-     */
+    // 종목 랜더링
     function renderStockList() {
         if (!els.stockSelector) return;
         els.stockSelector.innerHTML = '';
@@ -2207,7 +2025,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const market = stockData[ticker];
             if (!market) return; 
             
-            // [신규] 상장폐지 여부 확인
+            // 상장폐지 여부 확인
             const isDelisted = market.isDelisted || false;
             
             const price = market.price || 0;
@@ -2216,7 +2034,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const color = change > 0 ? 'text-red-600' : (change < 0 ? 'text-blue-600' : 'text-slate-500');
             
-            // [수정] 상장폐지 시 회색 처리
+            // 상장폐지 시 회색 처리
             const priceColor = isDelisted ? 'text-slate-400' : color;
             const changeColor = isDelisted ? 'text-slate-400' : (change === 0 ? 'text-slate-500' : color); // (0일 때도 회색)
             const nameColor = isDelisted ? 'text-slate-400' : 'text-slate-800';
@@ -2226,7 +2044,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = `p-3 rounded-lg border ${isActive} cursor-pointer transition-colors`;
 
-            // [신규] 상장폐지 배지
+            // 상장폐지 배지
             const delistedBadge = isDelisted ? '<span class="text-xs font-bold text-red-600">(거래정지)</span>' : '';
 
             item.innerHTML = `
@@ -2244,31 +2062,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * 종목 선택 시
-     */
+    // 종목 선택
     function selectTicker(ticker) {
         currentTicker = ticker;
         renderStockList(); // 활성 종목 UI 갱신
         updateStockInfoUI(); // 차트 및 정보 갱신
     }
 
-    /**
-     * 주식 정보 (차트 위) 갱신
-     */
+    // 주식 정보 갱신(차트 위)
     function updateStockInfoUI() {
         const market = stockData[currentTicker];
         
-        // [수정] market이 없거나, 'isDelisted'일 경우 처리
+        // market이 없거나, 'isDelisted'일 경우 처리
         if (!market || market.isDelisted) {
             
-            // [신규] 상장폐지 UI 처리
+            // 상장폐지 UI 처리
             if (market && market.isDelisted) {
                 els.stockName.textContent = market.name;
                 els.stockTicker.textContent = currentTicker;
                 els.price.textContent = "₩--";
                 
-                // ▼▼▼ [신규] 남은 시간 계산 타이머 ▼▼▼
+                // 남은 시간 계산
                 const delistTimestamp = market.delistTimestamp;
                 
                 if (delistTimestamp) {
@@ -2289,7 +2103,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     els.change.textContent = "(거래 정지)"; // 타임스탬프가 아직 없으면
                 }
-                // ▲▲▲ [신규] ▲▲▲
                 
                 els.price.className = `text-3xl font-bold text-slate-400`;
                 els.change.className = `text-base font-medium text-red-600`;
@@ -2349,14 +2162,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // [신규] 현금 + 주식 + 예금
+        // 현금 + 주식 + 예금
         const grossHoldings = cash + stockValue + savings;
         return grossHoldings;
     }
 
-    /**
-     * 거래 내역 UI 갱신
-     */
+    // 거래 내역 ui
     function updateHistoryUI() {
         if (!state.history) return;
         els.log.innerHTML = '';
@@ -2371,7 +2182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     
-    // === 13. Chart Logic ===
+    // 차트 로직 ( 중요함 )
     
     function initChart() {
         if (!els.chart) return;
@@ -2426,12 +2237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chartInstance.update('none'); // 애니메이션 없이 업데이트
     }
     
-
-    // === 14. Helper Functions ===
-    
-    /**
-     * 숫자 -> 통화 형식 (₩1,234)
-     */
+    // 숫자을 원화로 표시 ( ex ₩----)
     function formatCurrency(value, decimals = 0) {
         const num = Number(value);
         if (isNaN(num)) {
@@ -2443,9 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * [랭킹용] 총 자산 계산기
-     */
+    // 총 자산 계산
     function calculateNetworth(playerState, marketData) {
         
         let cash = Number(playerState.cash) || 0;
@@ -2461,18 +2265,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
-        // [오류 발생 지점] 여기서 'savings'를 찾지 못해서 오류가 났습니다.
+
         const networth = (cash + stockValue + savings) - loan;
         return networth;
     }
 
-    /**
-     * [최종 수정본] 거래 내역 추가 (TypeError 방어)
-     */
+    // 거래 내역 추가
     function addHistoryLogToPlayer(currentPlayerData, logMessage, type) {
         try {
-            // [핵심 방어] history가 배열이 아니면 강제로 새 빈 배열로 초기화
+            // history가 배열이 아니면 강제로 새 빈 배열로 초기화
             if (!Array.isArray(currentPlayerData.history)) {
                 currentPlayerData.history = [];
             }
@@ -2487,7 +2288,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error("addHistoryLogToPlayer 함수 실패:", e);
-            // (트랜잭션 자체는 중단시키지 않음)
         }
     }
 
@@ -2538,7 +2338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     
-    // === 15. Initial State Creation ===
+    // 초기 게임 상태 설정
 
     function createInitialGameState() {
         const initialPlayerStocks = {};
@@ -2556,19 +2356,16 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    /**
-     * [수정] 새 플레이어 상태 (allTickers 사용)
-     */
+    // 새 플레이어 상태
     function createInitialPlayerState(user) {
-        // [수정] 새 헬퍼 함수를 호출하여 초기 게임 데이터를 가져옴
+        // 새 헬퍼 함수를 호출하여 초기 게임 데이터를 가져옴
         const initialGameState = createInitialGameState();
 
         return {
             uid: user.uid, 
             displayName: user.displayName || "Anonymous User", 
             email: user.email || null,
-            
-            // (Helper 함수가 생성한 데이터)
+
             cash: initialGameState.cash,
             bank: initialGameState.bank,
             stocks: initialGameState.stocks, 
@@ -2580,12 +2377,12 @@ document.addEventListener('DOMContentLoaded', () => {
             savingsTimestamp: null,
             loan: 0,
             loanTimestamp: null,
-            loanRepayTimestamp: null, // [신규] 대출 상환 쿨타임용
+            loanRepayTimestamp: null,
             bankruptTimestamp: null
             },
             
             timeAttack: {
-                isInTimeAttack: false, // 현재 타임 어택 중인지
+                isInTimeAttack: false,
                 startTime: null, 
                 endTime: null,
                 lastScore: 0
@@ -2594,13 +2391,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
-    /**
-     * [수정] 새 마켓 상태 (새 티커 이름 사용)
-     */
+    // 초기 마켓 상태
     function createInitialMarketState() {
         const createStock = (name, price, volatility, eventChance, riseProb) => ({
             name, price, prevPrice: price, 
-            initialPrice: price, // '시작 가격'
+            initialPrice: price, 
             history: Array(MAX_HISTORY).fill(price),
             consecutiveRises: 0, consecutiveFalls: 0,
             baseVolatility: volatility,     
@@ -2610,69 +2405,64 @@ document.addEventListener('DOMContentLoaded', () => {
             delistTimestamp: null
         });
 
-        // (밸런스는 임의로 설정)
+        
         const marketStocks = {
-            // --- 주식 (30개) ---
-            'AAPL': createStock('Apple (애플)', 18000, 0.02, 0.03, 0.53), // 0.51 -> 0.53
-            'MSFT': createStock('Microsoft (마이크로소프트)', 35000, 0.018, 0.02, 0.514), // 0.52 -> 0.54
-            'GOOGL': createStock('Alphabet (구글)', 14000, 0.02, 0.03, 0.53), // 0.51 -> 0.53
-            'AMZN': createStock('Amazon (아마존)', 15000, 0.025, 0.04, 0.53), // 0.51 -> 0.53
-            'NVDA': createStock('NVIDIA (엔비디아)', 45000, 0.04, 0.08, 0.53), // 0.53 -> 0.54
-            'META': createStock('Meta Platforms (메타)', 30000, 0.035, 0.06, 0.53), // 0.50 -> 0.52
-            'TSLA': createStock('Tesla (테슬라)', 25000, 0.05, 0.1, 0.53), // 0.50 -> 0.52
-            'BRK-B': createStock('Berkshire Hathaway B (버크셔 해서웨이 B)', 36000, 0.01, 0.01, 0.515), // 0.52 -> 0.54
-            'V': createStock('Visa (비자)', 24000, 0.015, 0.02, 0.53), // 0.52 -> 0.54
-            'JNJ': createStock('Johnson & Johnson (존슨 앤 존슨)', 16000, 0.01, 0.01, 0.53), // 0.51 -> 0.53
-            'XOM': createStock('Exxon Mobil (엑슨모빌)', 11000, 0.018, 0.03, 0.53), // 0.51 -> 0.53
-            'JPM': createStock('JPMorgan Chase (JP모건 체이스)', 15000, 0.017, 0.02, 0.53), // 0.51 -> 0.53
-            'TSM': createStock('TSMC (TSMC)', 10000, 0.03, 0.05, 0.54), // 0.52 -> 0.54
-            'NFLX': createStock('Netflix (넷플릭스)', 40000, 0.035, 0.06, 0.53), // 0.50 -> 0.52
-            'SBUX': createStock('Starbucks (스타벅스)', 10000, 0.02, 0.03, 0.53), // 0.51 -> 0.53
-            'NKE': createStock('Nike (나이키)', 11000, 0.022, 0.04, 0.53), // 0.51 -> 0.53
-            'MCD': createStock("McDonald's (맥도날드)", 28000, 0.012, 0.01, 0.53), // 0.51 -> 0.53
-            'KO': createStock('Coca-Cola (코카콜라)', 6000, 0.01, 0.01, 0.54), // 0.52 -> 0.54
-            'DIS': createStock('Disney (디즈니)', 9000, 0.025, 0.04, 0.535), // 0.50 -> 0.52
-            'VT': createStock('Vanguard Total World ETF (뱅가드 토탈 월드 ETF)', 10000, 0.008, 0.01, 0.53), // 0.51 -> 0.53
-            'PG': createStock('Procter & Gamble (P&G)', 16000, 0.01, 0.01, 0.53), // 0.51 -> 0.53
-            'WMT': createStock('Walmart (월마트)', 15000, 0.012, 0.01, 0.53), // 0.51 -> 0.54
-            'PEP': createStock('PepsiCo (펩시코)', 17000, 0.01, 0.01, 0.53), // 0.51 -> 0.53
-            'HD': createStock('Home Depot (홈디포)', 30000, 0.017, 0.02, 0.53), // 0.51 -> 0.53
-            'SEC': createStock('삼성전자 (Samsung Elec.)', 75000, 0.018, 0.03, 0.515), // 0.52 -> 0.54
-            'SKH': createStock('SK하이닉스 (SK Hynix)', 20000, 0.025, 0.05, 0.53), // 0.51 -> 0.53
-            'LGES': createStock('LG에너지솔루션 (LG Energy Solution)', 35000, 0.03, 0.06, 0.535), // 0.50 -> 0.52
-            'HYMT': createStock('현대자동차 (Hyundai Motor)', 25000, 0.02, 0.04, 0.53), // 0.51 -> 0.53
-            'NAVER': createStock('네이버 (NAVER)', 17000, 0.035, 0.07, 0.535), // 0.50 -> 0.52
+            'AAPL': createStock('Apple (애플)', 18000, 0.02, 0.03, 0.53), 
+            'MSFT': createStock('Microsoft (마이크로소프트)', 35000, 0.018, 0.02, 0.514), 
+            'GOOGL': createStock('Alphabet (구글)', 14000, 0.02, 0.03, 0.53), 
+            'AMZN': createStock('Amazon (아마존)', 15000, 0.025, 0.04, 0.53), 
+            'NVDA': createStock('NVIDIA (엔비디아)', 45000, 0.04, 0.08, 0.53), 
+            'META': createStock('Meta Platforms (메타)', 30000, 0.035, 0.06, 0.53), 
+            'TSLA': createStock('Tesla (테슬라)', 25000, 0.05, 0.1, 0.53), 
+            'BRK-B': createStock('Berkshire Hathaway B (버크셔 해서웨이 B)', 36000, 0.01, 0.01, 0.515), 
+            'V': createStock('Visa (비자)', 24000, 0.015, 0.02, 0.53), 
+            'JNJ': createStock('Johnson & Johnson (존슨 앤 존슨)', 16000, 0.01, 0.01, 0.53), 
+            'XOM': createStock('Exxon Mobil (엑슨모빌)', 11000, 0.018, 0.03, 0.53), 
+            'JPM': createStock('JPMorgan Chase (JP모건 체이스)', 15000, 0.017, 0.02, 0.53), 
+            'TSM': createStock('TSMC (TSMC)', 10000, 0.03, 0.05, 0.54),
+            'NFLX': createStock('Netflix (넷플릭스)', 40000, 0.035, 0.06, 0.53),
+            'SBUX': createStock('Starbucks (스타벅스)', 10000, 0.02, 0.03, 0.53), 
+            'NKE': createStock('Nike (나이키)', 11000, 0.022, 0.04, 0.53), 
+            'MCD': createStock("McDonald's (맥도날드)", 28000, 0.012, 0.01, 0.53), 
+            'KO': createStock('Coca-Cola (코카콜라)', 6000, 0.01, 0.01, 0.54), 
+            'DIS': createStock('Disney (디즈니)', 9000, 0.025, 0.04, 0.535), 
+            'VT': createStock('Vanguard Total World ETF (뱅가드 토탈 월드 ETF)', 10000, 0.008, 0.01, 0.53),
+            'PG': createStock('Procter & Gamble (P&G)', 16000, 0.01, 0.01, 0.53),
+            'WMT': createStock('Walmart (월마트)', 15000, 0.012, 0.01, 0.53), 
+            'COST': createStock('Costco (코스트코)', 50000, 0.015, 0.02, 0.52), 
+            'PEP': createStock('PepsiCo (펩시코)', 17000, 0.01, 0.01, 0.53), 
+            'HD': createStock('Home Depot (홈디포)', 30000, 0.017, 0.02, 0.53),
+            'SEC': createStock('삼성전자 (Samsung Elec.)', 75000, 0.018, 0.03, 0.515),
+            'SKH': createStock('SK하이닉스 (SK Hynix)', 20000, 0.025, 0.05, 0.53), 
+            'LGES': createStock('LG에너지솔루션 (LG Energy Solution)', 35000, 0.03, 0.06, 0.535),
+            'HYMT': createStock('현대자동차 (Hyundai Motor)', 25000, 0.02, 0.04, 0.53), 
+            'NAVER': createStock('네이버 (NAVER)', 17000, 0.035, 0.07, 0.535), 
 
-            // --- 실물자산 (ASSETS) ---
-            'GOLD': createStock('금 (Gold)', 20000, 0.015, 0.02, 0.55), // 0.51 -> 0.53
-            'SLVR': createStock('은 (Silver)', 2500, 0.025, 0.04, 0.544), // 0.50 -> 0.52
-            'OIL': createStock('WTI 원유 (Crude Oil)', 8000, 0.035, 0.08, 0.544), // 0.50 -> 0.52
-            'NGAS': createStock('천연가스 (Natural Gas)', 3000, 0.095, 0.15, 0.544), // 0.50 -> 0.52
-            'COPR': createStock('구리 (Copper)', 8500, 0.025, 0.055, 0.545), // 0.51 -> 0.53
-            'WHEAT': createStock('밀 (Wheat)', 6000, 0.05, 0.105, 0.545), // 0.50 -> 0.52
+            'GOLD': createStock('금 (Gold)', 20000, 0.015, 0.02, 0.55), 
+            'SLVR': createStock('은 (Silver)', 2500, 0.025, 0.04, 0.544),
+            'OIL': createStock('WTI 원유 (Crude Oil)', 8000, 0.035, 0.08, 0.544), 
+            'NGAS': createStock('천연가스 (Natural Gas)', 3000, 0.095, 0.15, 0.544), 
+            'COPR': createStock('구리 (Copper)', 8500, 0.025, 0.055, 0.545), 
+            'WHEAT': createStock('밀 (Wheat)', 6000, 0.05, 0.105, 0.545), 
 
-            // --- 채권 (BONDS) ---
-            'BOND_L': createStock('미국 장기채 (US Long Bond)', 10000, 0.007, 0.01, 0.6), // 0.505 -> 0.525
-            'BOND_S': createStock('미국 단기채 (US Short Bond)', 5000, 0.005, 0.00, 0.6), // 0.51 -> 0.53
-            'CORP_B': createStock('미국 회사채 (Corp. Bond)', 9000, 0.01, 0.01, 0.6), // 0.51 -> 0.53
-            'HY_B': createStock('하이일드 채권 (High-Yield)', 7000, 0.015, 0.03, 0.6), // 0.50 -> 0.52
+            'BOND_L': createStock('미국 장기채 (US Long Bond)', 10000, 0.007, 0.01, 0.6), 
+            'BOND_S': createStock('미국 단기채 (US Short Bond)', 5000, 0.005, 0.00, 0.6), 
+            'CORP_B': createStock('미국 회사채 (Corp. Bond)', 9000, 0.01, 0.01, 0.6), 
+            'HY_B': createStock('하이일드 채권 (High-Yield)', 7000, 0.015, 0.03, 0.6), 
 
-            // --- 코인 (COINS) ---
-            'BTC': createStock('비트코인 (Bitcoin)', 600000, 0.08, 0.15, 0.515), // 0.50 -> 0.52
-            'ETH': createStock('이더리움 (Ethereum)', 3000, 0.10, 0.18, 0.513), // 0.50 -> 0.52
-            'DOGE': createStock('도지코인 (Dogecoin)', 1000, 0.20, 0.30, 0.515), // 0.50 -> 0.52
-            'SOL': createStock('솔라나 (Solana)', 1500, 0.15, 0.25, 0.515), // 0.50 -> 0.52
+            'BTC': createStock('비트코인 (Bitcoin)', 600000, 0.08, 0.15, 0.515),
+            'ETH': createStock('이더리움 (Ethereum)', 3000, 0.10, 0.18, 0.513),
+            'DOGE': createStock('도지코인 (Dogecoin)', 1000, 0.20, 0.30, 0.515), 
+            'SOL': createStock('솔라나 (Solana)', 1500, 0.15, 0.25, 0.515), 
             
-            // --- 기타 (MISC) ---
-            'DEV_MOOD': createStock('개발자 기분 (Dev Mood)', 1000, 0.0, 0.0, 0), // 0.50 -> 0.52
+            'DEV_MOOD': createStock('개발자 기분 (Dev Mood)', 1000, 0.0, 0.0, 0),
             'SONG': createStock('송송그룹 (Song)', 100000, 0.12, 0.05, 0.529),
             'COOKIE': createStock('쿠키컴퍼니 (CookieCo)', 7500, 0.25, 0.3, 0.529)
         };
         return marketStocks;
     }
-    /**
-     * (루프) 모든 마켓 가격 갱신 (트랜잭션 사용)
-     */
+
+    // 시장 가격 갱신
     function updateStockPrices() {
         // 상패 기록용
         const now = Date.now();
@@ -2684,9 +2474,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- 상패 관련 상수 ---
             const DELIST_PERCENT = 0.05; // 5% (시작 가격 대비)
             
-            // --- [수정] 평균 회귀(Mean Reversion) 상수 설정 ---
+            // 평균 회귀(Mean Reversion) 상수 설정
             
-            // --- [수정] 평균 회귀(Mean Reversion) 상수 설정 ---
             const REVERSION_STRENGTH_DOWN = 0.05; 
             const MIN_RISE_PROBABILITY = 0.1;     
             const REVERSION_STRENGTH_UP = 0.1;    
@@ -2807,39 +2596,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return currentMarketData; 
             
-        }, (error, committed, snapshot) => {
-            if (error) {
-                console.error("주가 업데이트 트랜잭션 실패:", error);
-            }
         });
     }
 
     function startMarketTimer() {
-        // [중요] 이미 타이머가 실행 중이면(null이 아니면) 중복 실행 방지
         if (marketUpdateTimer) {
             console.warn("관리자 타이머가 이미 이 브라우저에서 실행 중입니다.");
             return;
         }
         
-        // [권장] 1.5초(1500)는 DB 요금에 매우 위험합니다. 5분(300000)을 강력히 권장합니다.
-        const UPDATE_INTERVAL_MS = 1500; // 5분 (300,000 밀리초)
+        const UPDATE_INTERVAL_MS = 3000; 
         
         console.log(`관리자: 주식 시장 타이머 시작 (주기: ${UPDATE_INTERVAL_MS / 1000}초)`);
         
-        // 타이머를 글로벌 변수에 할당
         marketUpdateTimer = setInterval(updateStockPrices, UPDATE_INTERVAL_MS);
-        
-        // (선택) 관리자가 접속하자마자 1회 즉시 실행
-        // updateStockPrices(); 
     }
-    // ▲▲▲ [신규 1/2] 끝 ▲▲▲
 
-
-    // ▼▼▼ [신규 2/2] 타이머 정지 함수 ▼▼▼
-    
-    /**
-     * [신규] 주식 시장 타이머를 정지합니다. (로그아웃 시)
-     */
     function stopMarketTimer() {
         if (marketUpdateTimer) {
             console.log("관리자: 주식 시장 타이머 정지.");
@@ -2847,11 +2619,5 @@ document.addEventListener('DOMContentLoaded', () => {
             marketUpdateTimer = null;
         }
     }
-
-
-    // === 17. 게임 시작 ===
     initGame();
-
 });
-
-
