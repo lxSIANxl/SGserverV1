@@ -850,6 +850,42 @@ document.addEventListener('DOMContentLoaded', () => {
      * 데이터 구조: players/{uid}/stocks/{ticker}/(shares, averagePrice)
      */
     async function handleForceLiquidate(ticker) {
+
+        const market = stockData[ticker];
+        if (!market || typeof market.price !== 'number' || isNaN(market.price)) {
+
+            console.error(`[강제 청산] ${ticker}의 마켓/가격 정보를 찾을 수 없어 청산을 건너뜁니다.`);
+
+            return; // 마켓 정보 없으면 중단
+
+        }
+        // 상장폐지 가격 (이것이 마지막 거래 가격임)
+        const delistPrice = market.price;
+        // 매도 수수료(FEE_RATE)를 뺀 1주당 실제 수익
+        const pricePerShare = delistPrice * (1 - FEE_RATE);
+        if (isNaN(pricePerShare)) {
+             console.error(`[강제 청산] ${ticker}의 청산 비용 계산 실패 (FEE_RATE 오류).`);
+             return; // 수수료 계산 실패 시 중단
+        }
+        playerRef.transaction((currentPlayerData) => {
+            if (!currentPlayerData) return;
+            const stock = currentPlayerData.stocks[ticker];
+            let currentShares = Number(stock ? stock.shares : 0);
+            if (isNaN(currentShares) || currentShares <= 0) {
+                return;
+            }
+            let currentAvgPrice = Number(stock ? stock.averagePrice : 0);
+            if (isNaN(currentAvgPrice)) { currentAvgPrice = 0; }
+            let currentCash = Number(currentPlayerData.cash);
+            if (isNaN(currentCash)) { currentCash = 0; }
+            const revenue = pricePerShare * currentShares;
+            currentPlayerData.cash = currentCash + revenue;
+            stock.shares = 0;
+            stock.averagePrice = 0;
+            return currentPlayerData;
+
+        })
+        
         console.log(`[시스템] '${ticker}' 주식 데이터(수량/평단가) 일괄 삭제 시작...`);
 
         try {
@@ -886,7 +922,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.log(`[시스템] '${ticker}'를 보유한 유저가 없어 삭제할 것이 없습니다.`);
             }
-
         } catch (error) {
             console.error(`[에러] 주식 삭제 중 오류 발생:`, error);
         }
