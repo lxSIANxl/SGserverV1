@@ -3,427 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase 실시간 주식 게임</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    
+    <title>서비스 종료 안내 - 그동안 감사했습니다</title>
     <style>
-        /* 차트가 부모 요소를 넘어가는 것을 방지 */
-        .chart-container { position: relative; height: 300px; width: 100%; }
-        /* 스크롤바 디자인 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: #c5c5c5; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        /* 1. 기본 설정 및 배경 */
+        :root {
+            --bg-color: #0f172a;       /* 짙은 남색 배경 */
+            --card-bg: #1e293b;        /* 카드 배경 */
+            --text-main: #f8fafc;      /* 메인 텍스트 */
+            --text-sub: #94a3b8;       /* 보조 텍스트 */
+            --accent: #fbbf24;         /* 골드 포인트 */
+            --accent-glow: rgba(251, 191, 36, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        /* 2. 메인 컨테이너 (카드 형태) */
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 20px;
+        }
+
+        /* 3. 아이콘 및 헤더 */
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: rgba(251, 191, 36, 0.1);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 24px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .icon-wrapper svg {
+            width: 40px;
+            height: 40px;
+            fill: var(--accent);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+        }
+
+        /* 4. 본문 내용 */
+        .message {
+            color: var(--text-sub);
+            font-size: 16px;
+            margin-bottom: 40px;
+            word-break: keep-all;
+        }
+
+        /* 5. 통계 요약 박스 (선택 사항) */
+        .stats-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 40px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* 6. 버튼 스타일 */
+        .btn-home {
+            display: inline-block;
+            background-color: var(--accent);
+            color: #0f172a;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px var(--accent-glow);
+            background-color: #fcd34d;
+        }
+
+        /* 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 반응형 */
+        @media (max-width: 480px) {
+            .container { padding: 30px 20px; }
+            h1 { font-size: 24px; }
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900">
+<body>
 
-    <div id="authScreen" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-xl shadow-2xl text-center w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-6 text-slate-800">로그인</h2>
-            <p class="text-slate-600 mb-6">Google 계정으로 로그인하세요.</p>
-            <button id="googleLoginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                Google 계정으로 시작하기
-            </button>
+    <div class="container">
+        <div class="icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+                <path d="M0 0h24v24H0z" fill="none"/>
+            </svg>
         </div>
-    </div>
 
-    <div id="mainGame" class="max-w-screen-2xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-4 gap-6 hidden">
+        <div class="subtitle">Mission Complete</div>
+        <h1>긴 여정을 마쳤습니다</h1>
 
-        <div class="lg:col-span-4 mb-4">
-            <header class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
-                
-                <div class="flex items-center gap-3">
-                    <h1 class="text-xl font-bold text-indigo-700">
-                        Firebase Stock Game
-                    </h1>
-                    <button id="adminMenuBtn" class="hidden bg-purple-700 hover:bg-purple-800 text-white px-3 py-1 rounded-lg text-xs font-bold transition-colors active:scale-95 transform">
-                        ⚙️ 관리자
-                    </button>
-                    </div>
-                <div class="flex items-center gap-3">
-                    
-                    <div id="timeAttackTimerDisplay" class="hidden text-red-600 font-bold text-sm">
-                        남은 시간: 07:00
-                    </div>
-    
-                    <button id="timeAttackBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        🔥 타임 어택
-                    </button>
-                    <button id="timeAttackCancelBtn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        중지
-                    </button>
-                    
-                    <button id="bankBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        🏦 은행
-                    </button>
-                    
-                    <button id="showRankingModalBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        🏆 랭킹
-                    </button>
-                    
-                    <button id="logoutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        로그아웃
-                    </button>
-                </div>
-            </header>
-        </div>
-        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-            <h3 class="text-xl font-bold text-slate-800 mb-4">종목</h3>
-            <div class="grid grid-cols-4 gap-1 mb-4">
-                <button id="showStocksBtn" class="tab-btn px-2 py-2 text-sm font-bold rounded-md bg-indigo-600 text-white shadow-sm">주식</button>
-                <button id="showAssetsBtn" class="tab-btn px-2 py-2 text-sm font-bold rounded-md bg-white text-slate-500 hover:bg-slate-100">자산</button>
-                <button id="showBondsBtn" class="tab-btn px-2 py-2 text-sm font-bold rounded-md bg-white text-slate-500 hover:bg-slate-100">채권</button>
-                <button id="showCoinsBtn" class="tab-btn px-2 py-2 text-sm font-bold rounded-md bg-white text-slate-500 hover:bg-slate-100">코인</button>
-                <button id="showMiscBtn" class="tab-btn px-2 py-2 text-sm font-bold rounded-md bg-white text-slate-500 hover:bg-slate-100">기타</button>
+        <p class="message">
+            지난 시간 동안 저희 주식 게임과 함께 플레이해 주신<br>
+            모든 플레이어 여러분께 진심으로 감사드립니다.<br><br>
+            여러분의 덕분에<br>
+            이 가상 시장은 재밌게 운영될 수 있었습니다.<br>
+            이제 모든 장을 마감하고, 소중한 추억을 간직하겠습니다.
+        </p>
+
+        <div class="stats-box">
+            <div class="stat-item">
+                <span class="stat-label">총 운영 기간</span>
+                <span class="stat-value">약 30일</span>
             </div>
-            <div id="stockSelector" class="space-y-2 h-[600px] overflow-y-auto pr-2">
-                </div>
-        </div>
-
-        <div class="lg:col-span-2 space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h2 id="stockName" class="text-2xl font-bold text-slate-900">...</h2>
-                        <p id="stockTicker" class="text-sm font-mono text-slate-500">...</p>
-                    </div>
-                    <div class="text-right">
-                        <p id="price" class="text-3xl font-bold text-slate-900">...</p>
-                        <p id="change" class="text-base font-medium text-slate-500">...</p>
-                    </div>
-                </div>
-                
-                <div class="chart-container mb-4">
-                    <canvas id="chart"></canvas>
-                </div>
-
-                <div class="mt-4 flex gap-3">
-                    <input id="amount" type="number" value="1" min="1" class="flex-1 w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    
-                    <button id="buyBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        매수 (수량)
-                    </button>
-
-                    <button id="buyMaxBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        전액 매수
-                    </button>
-
-                    <button id="sellBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                        매도 (수량)
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 class="text-xl font-bold text-slate-800 mb-4">거래 내역</h3>
-                <div id="log" class="space-y-2 h-32 overflow-y-auto pr-2 text-sm text-slate-500">
-                    </div>
+            <div class="stat-item">
+                <span class="stat-label">플레이어 수</span>
+                <span class="stat-value">40+</span>
             </div>
         </div>
 
-        <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 class="text-xl font-bold text-slate-800 mb-4">내 포트폴리오</h3>
-                
-                <div class="mb-4 space-y-2">
-                    <div class="flex justify-between items-center py-3 border-b border-slate-200">
-                        <span class="text-sm font-semibold text-slate-800">현금</span>
-                        <span id="cash" class="font-mono font-bold">...</span>
-                    </div>
-                    <div class="flex justify-between items-center py-3 border-b border-slate-200">
-                        <span class="text-sm font-semibold text-slate-800">주식 평가액</span>
-                        <span id="stockValue" class="font-mono font-bold">...</span>
-                    </div>
-                    <div class="flex justify-between items-center py-3 border-b border-slate-200">
-                        <span class="text-sm font-semibold text-slate-800">총 보유금</span>
-                        <span id="totalGrossHoldings" class="text-lg font-bold text-slate-900 font-mono">₩0</span>
-                    </div>
-
-                    <div class="flex justify-between items-center py-3 border-b border-slate-200">
-                        <span class="text-sm font-semibold text-blue-800">총 자산</span>
-                        <span id="totalNetWorth" class="text-lg font-bold text-blue-700 font-mono">₩0</span>
-                    </div>
-                </div>
-                
-                <div id="portfolioList" class="space-y-3 h-48 overflow-y-auto pr-2 mb-4">
-                    </div>
-
-                <button id="sellAllBtn" class="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-lg text-base font-bold transition-colors active:scale-95 transform mt-3">
-                     보유 주식 전액 매도
-                </button>
-                </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 class="text-xl font-bold text-slate-800 mb-4">뉴스</h3>
-                <div id="newsBox" class="space-y-3 h-64 overflow-y-auto pr-2 text-sm text-slate-700">
-                    <p class="text-slate-500">뉴스 기능은 현재 개발 중입니다...</p>
-                    
-                    </div>
-            </div>
-        </div>
-    </div> <div id="alertModal" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <h2 class="text-xl font-bold text-slate-800 mb-4">알림</h2>
-            <p id="alertMessage" class="text-slate-600 mb-6">...</p>
-            <button id="alertCloseBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">
-                확인
-            </button>
-        </div>
-    </div>
-
-    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <h2 class="text-xl font-bold text-slate-800 mb-4">확인</h2>
-            <p id="confirmMessage" class="text-slate-600 mb-6">...</p>
-            <div class="flex gap-3">
-                <button id="confirmCancelBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">
-                    취소
-                </button>
-                <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
-                    확인
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="bankModal" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center p-4 z-40 hidden">
+        <button class="btn-home" onclick="window.close()">안녕히 계세요</button>
         
-        <div class="bg-white rounded-xl shadow-2xl w-full p-6 min-h-[75vh] flex flex-col">
-            
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-900">🏦 은행</h2>
-                
-                <button id="bankCloseBtn" class="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors">
-                    닫기
-                </button>
-            </div>
-            
-            <div class="mb-6 bg-blue-50 border border-blue-200 p-4 rounded-lg flex justify-between items-center w-1/3">
-                <span class="text-lg font-semibold text-slate-700">현재 보유 현금</span>
-                <span id="bankModalCash" class="text-2xl font-bold text-blue-600 font-mono">₩0</span>
-            </div>
-            
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
-                
-                <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 flex flex-col h-full">
-                    <h4 class="text-lg font-semibold text-slate-800 mb-3">💰 예금 (복리 2%)</h4>
-                    <p class="text-sm text-slate-600 mb-4">
-                        현금을 예금하여 30분마다 2%의 이자를 받습니다.
-                    </p>
-
-                    <div class="mb-4 space-y-2">
-                        <div class="bg-gray-100 p-5 rounded-lg border border-gray-200">
-                            
-                            <div class="flex justify-between items-center text-base">
-                                <span class="font-medium text-slate-600">현재 예금액</span>
-                                <span id="bankSavingsAmount" class="font-bold text-slate-800 font-mono">₩0</span>
-                            </div>
-                            
-                            <div class="flex justify-between items-center text-base mt-2 pt-2 border-t border-gray-200">
-                                <span class="font-medium text-slate-600">다음 이자 (2%)</span>
-                                <span id="bankNextInterest" class="font-bold text-green-600 font-mono">+ ₩0</span>
-                            </div>
-                            
-                            <div class="flex justify-between items-center text-base mt-2 pt-2 border-t border-gray-200">
-                                <span class="font-medium text-slate-600">이자 지급까지</span>
-                                <span id="bankNextInterestTimer" class="font-bold text-blue-600 font-mono">--:--</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-auto space-y-3"> <div class="flex gap-3">
-                            <input id="saveAmount" type="number" value="10000" min="1" class="flex-1 w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div class="flex gap-3">
-                            <button id="saveBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                                예금하기
-                            </button>
-                            <button id="saveWithdrawBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                                전액 인출
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 flex flex-col h-full">
-                    <h4 class="text-lg font-semibold text-slate-800 mb-3">💸 대출 (연 20%)</h4>
-                    <p class="text-sm text-slate-600 mb-4">
-                        최대 대출가능 금액은 보유액의 3배이고 대출 이자는 20%입니다. 또한 대출을 상환한 이후로 10분간 대출은 불가능합니다.
-                    </p>
-
-                    <div class="mb-4 space-y-2">
-                        <div class="bg-gray-100 p-5 rounded-lg border border-gray-200">
-                            
-                            <div class="flex justify-between items-center text-base">
-                                <span class="font-medium text-slate-600">현재 대출액</span>
-                                <span id="bankLoanAmount" class="font-bold text-slate-800 font-mono">₩0</span>
-                            </div>
-                            
-                            <div class="flex justify-between items-center text-base mt-2 pt-2 border-t border-gray-200">
-                                <span class="font-medium text-slate-600">(전액) 상환금</span>
-                                <span id="bankRepaymentAmount" class="font-bold text-red-600 font-mono">₩0</span>
-                            </div>
-                            
-                            <div class="flex justify-between items-center text-base mt-2 pt-2 border-t border-gray-200">
-                                <span class="font-medium text-slate-600">다음 대출까지</span>
-                                <span id="bankNextLoanTimer" class="font-bold text-blue-600 font-mono">--:--</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-auto space-y-3"> 
-                        <label for="loanAmount" class="block text-xs font-medium text-slate-600 mb-1">
-                            최대 대출 가능 금액: 
-                            <span id="maxLoanInfo" class="font-bold text-blue-600 font-mono">₩0</span>
-                        </label>
-                        <div class="flex gap-3">
-                            <input id="loanAmount" type="number" value="10000" min="1" class="flex-1 w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div class="flex gap-3">
-                            <button id="loanBtn" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                                대출하기
-                            </button>
-                            <button id="repayBtn" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                                전액 상환
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 flex flex-col h-full">
-                    <h4 class="text-lg font-semibold text-red-700 mb-3">🚨 파산 신청</h4>
-                    <p class="text-sm text-slate-600 mb-4">
-                        모든 자산이 청산됩니다. (현금 300만, 대출 500만) 또한 10분간 파산이 불가능 합니다.
-                    </p>
-
-                    <div class="mb-4 space-y-2">
-                        <div class="bg-gray-100 p-5 rounded-lg border border-gray-200">
-                            <div class="flex justify-between items-center text-base">
-                                <span class="font-medium text-slate-600">다음 파산까지</span>
-                                <span id="bankruptCooldownTimer" class="font-bold text-blue-600 font-mono">--:--</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-auto"> <button id="bankruptBtn" class="w-full bg-red-700 hover:bg-red-800 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform">
-                            파산 신청 (모든 자산 초기화)
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <p style="margin-top: 20px; font-size: 12px; color: #475569;">
+            © 2024 Stock Game Project. All rights reserved.
+        </p>
     </div>
-
-    <div id="rankingModal" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center p-4 z-40 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-slate-900">🏆 랭킹</h2>
-                
-                <button id="rankingCloseBtn" class="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors">
-                    닫기
-                </button>
-            </div>
-            <div class="flex gap-2 mb-3">
-                <button id="showNetWorthRankBtn" class="rank-tab-btn flex-1 px-4 py-2 rounded-md font-bold text-sm shadow-sm bg-indigo-600 text-white">
-                    총 자산
-                </button>
-                <button id="showTimeAttackRankBtn" class="rank-tab-btn flex-1 px-4 py-2 rounded-md font-bold text-sm shadow-sm bg-white text-slate-500 hover:bg-slate-100">
-                    타임 어택
-                </button>
-            </div>
-
-            <div id="rankingList" class="space-y-2 h-[40rem] overflow-y-auto pr-2">
-                <p class="text-slate-500 text-sm">랭킹을 불러오는 중...</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center p-4 z-40 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-900">⚙️ 관리자 전용 탭</h2>
-                
-                <button id="adminCloseBtn" class="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors">
-                    닫기
-                </button>
-            </div>
-            <div class="space-y-4">
-                <p class="text-sm text-slate-600 mb-4">이 탭의 버튼들은 관리자에게만 보입니다.</p>
-                
-                <button id="devResetBtn" class="w-full bg-yellow-400 hover:bg-yellow-500 text-white px-4 py-3 rounded-lg text-base font-bold transition-colors active:scale-95 transform">
-                    (관리자) Admin Reset
-                </button>
-
-                <div class="mt-6 pt-6 border-t border-slate-200">
-                    <h4 class="text-base font-semibold text-slate-700 mb-3">
-                        📰 새 뉴스 작성
-                    </h4>
-                    
-                    <textarea id="adminNewsContent" 
-                        class="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" 
-                        rows="4" 
-                        placeholder="뉴스 내용을 입력하세요..."></textarea>
-                    
-                    <button id="adminNewsSubmitBtn" 
-                        class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform mt-3">
-                        뉴스 게시
-                    </button>
-                </div>
-
-                <div class="mt-6 pt-6 border-t border-slate-200">
-                    </div>
-
-                <div class="mt-6 pt-6 border-t border-slate-200">
-                    <h4 class="text-base font-semibold text-slate-700 mb-3">
-                        📈 주가 설정 (조작)
-                    </h4>
-                    
-                    <div class="space-y-3">
-                        <div>
-                            <label for="adminStockTicker" class="text-xs font-medium text-slate-600">종목 코드 (예: AAPL)</label>
-                            <input type="text" id="adminStockTicker" placeholder="AAPL"
-                                class="w-full mt-1 p-2 border border-slate-300 rounded-lg text-sm ...">
-                        </div>
-                        <div>
-                            <label for="adminStockPrice" class="text-xs font-medium text-slate-600">새로운 가격</label>
-                            <input type="number" id="adminStockPrice" placeholder="100000"
-                                class="w-full mt-1 p-2 border border-slate-300 rounded-lg text-sm ...">
-                        </div>
-                    </div>
-                    
-                    <button id="adminStockManipulateBtn" 
-                        class="w-full bg-amber-500 hover:bg-amber-600 text-white px-4 py-3 rounded-lg text-sm font-bold transition-colors active:scale-95 transform mt-4">
-                        주가 강제 설정
-                    </button>
-                </div>
-            </div>     
-        </div>
-    </div>
-
-    <script>
-        // ======================================================
-        // (1) Firebase 구성 (여기에 본인의 설정을 붙여넣으세요)
-        // ======================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCY6UACUt7mqPXUlRkh6M1DPse-FZSYBPE",
-            authDomain: "stockgamev1.firebaseapp.com",
-            databaseURL: "https://stockgamev1-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "stockgamev1",
-            storageBucket: "stockgamev1.firebasestorage.app",
-            messagingSenderId: "541574662830",
-            appId: "1:541574662830:web:0aecaaeaccb1f823807b3f",
-            measurementId: "G-FTZ6J81P0B"
-        };
-        // Firebase 앱 초기화
-        firebase.initializeApp(firebaseConfig);
-    </script>
-    <script src="./firebase_script.js"></script>
 
 </body>
 </html>
